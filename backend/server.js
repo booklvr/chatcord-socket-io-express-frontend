@@ -2,16 +2,14 @@ import path from 'path'
 import http from 'http'
 import express from 'express'
 import dotenv from 'dotenv'
-import { Server } from 'socket.io'
+import { Server as SocketIOServer } from 'socket.io'
 
 const __dirname = path.resolve()
+dotenv.config({ path: '../.env' })
 
 const app = express()
 const server = http.createServer(app)
-const io = new Server(server)
-
-dotenv.config({ path: '../.env' })
-
+const io = new SocketIOServer(server)
 
 if (process.env.NODE_ENV === 'production') {
   // app.use(express.static(path.join(__dirname, '/frontend/public')))
@@ -36,4 +34,6 @@ io.on('connection', (socket) => {
 
 const PORT = 5000 || process.env.port
 
-server.listen(PORT, () => console.log(`Server running in ${process.env.NODE_ENV} on ${PORT}.`))
+server.listen(PORT, () =>
+  console.log(`Server running in ${process.env.NODE_ENV} on ${PORT}.`)
+)
