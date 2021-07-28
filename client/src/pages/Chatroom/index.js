@@ -1,7 +1,7 @@
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 
-import React from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 
 import { FaSmile, FaUsers, FaComments, FaPaperPlane } from 'react-icons/fa'
 
@@ -62,6 +62,8 @@ const ChatMessagesContainer = styled.div`
   padding: 30px;
   max-height: 500px;
   overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
 `
 
 const ChatMeta = styled.p`
@@ -110,7 +112,56 @@ const ChatFormSubmitButton = styled.button`
   font-size: 17px;
 `
 
-const Chatroom = () => {
+const EndOfChat = styled.div``
+
+const Chatroom = ({ match, socket }) => {
+  const messagesEndRef = useRef(null)
+
+  const username = match.params.username
+  const room = match.params.room
+
+  console.log('room', room)
+  console.log('name', username)
+
+  const [messages, setMessages] = useState([])
+  const [users, setUsers] = useState([])
+  const [text, setText] = useState('')
+
+  useEffect(() => {
+    socket.on('message', (data) => {
+      //decypt
+
+      let temp = messages
+      temp.push({
+        userId: data.userId,
+        username: data.username,
+        text: data.text,
+      })
+      setMessages([...temp])
+    })
+    socket.on('newMember', (data) => {
+      setUsers(data)
+    })
+    // socket.on('removeMember', (data) => {
+    //   setUsers(data)
+    // })
+  }, [socket])
+
+  const sendData = () => {
+    if (text !== '') {
+      //encrypt here
+
+      socket.emit('chat', text)
+      setText('')
+    }
+  }
+
+  const scrollToBottom = () => {
+    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(scrollToBottom, [messages])
+
   return (
     <>
       <ChatContainer>
@@ -130,44 +181,40 @@ const Chatroom = () => {
               <FaUsers /> Users
             </ChatH3>
             <ChatList>
-              <ChatListItem>Brad</ChatListItem>
-              <ChatListItem>John</ChatListItem>
-              <ChatListItem>Mary</ChatListItem>
-              <ChatListItem>Paul</ChatListItem>
-              <ChatListItem>Mike</ChatListItem>
+              {users.map((user) => (
+                <ChatListItem key={user}>{user}</ChatListItem>
+              ))}
             </ChatList>
           </ChatSidebar>
-          <ChatMessagesContainer class='chat-messages'>
-            <ChatMessage class='message'>
-              <ChatMeta class='meta'>
-                Brad <ChatTime>9:12pm</ChatTime>
-              </ChatMeta>
-              <ChatText class='text'>
-                Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                Eligendi, repudiandae.
-              </ChatText>
-            </ChatMessage>
-            <ChatMessage class='message'>
-              <ChatMeta class='meta'>
-                Mary <ChatTime>9:15pm</ChatTime>
-              </ChatMeta>
-              <ChatText class='text'>
-                Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                Eligendi, repudiandae.
-              </ChatText>
-            </ChatMessage>
+          <ChatMessagesContainer>
+            {messages.map((message, i) => (
+              <ChatMessage key={i}>
+                <ChatMeta>
+                  {message.username} <ChatTime>get time</ChatTime>
+                </ChatMeta>
+                <ChatText>{message.text}</ChatText>
+              </ChatMessage>
+            ))}
+
+            <EndOfChat ref={messagesEndRef} />
           </ChatMessagesContainer>
         </ChatMain>
-        <ChatFormContainer class='chat-form-container'>
+        <ChatFormContainer>
           <ChatForm id='chat-form'>
             <ChatFormInput
-              id='msg'
               type='text'
+              value={text}
               placeholder='Enter Message'
               required
               autocomplete='off'
+              onChange={(e) => setText(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  sendData()
+                }
+              }}
             />
-            <ChatFormSubmitButton class='btn'>
+            <ChatFormSubmitButton onClick={sendData}>
               <FaPaperPlane /> Send
             </ChatFormSubmitButton>
           </ChatForm>
